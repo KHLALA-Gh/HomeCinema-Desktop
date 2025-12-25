@@ -30,6 +30,7 @@
   "build": {
     "appId": "com.khlala.homecinema",
     "productName": "HomeCinema",
+    "publish": null,
     "directories": {
       "output": "build",
       "buildResources": "assets"
