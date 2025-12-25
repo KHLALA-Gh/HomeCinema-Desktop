@@ -1,0 +1,68 @@
+{
+  "name": "homecinema",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsc && cross-env NODE_ENV=production electron .",
+    "build": "npm run build:ts && electron-builder",
+    "build:ts": "tsc"
+  },
+  "author": {
+    "name": "khlala",
+    "email": "khalilgha812@gmail.com"
+  },
+  "homepage": "https://github.com/KHLALA-Gh/HomeCinema-Desktop",
+  "license": "Apache-2.0",
+  "description": "Home Cinema Desktop App",
+  "dependencies": {
+    "@home-cinema/app": "^0.0.2",
+    "dotenv": "^17.2.3",
+    "get-port": "^7.1.0"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.9.3"
+  },
+  "build": {
+    "appId": "com.khlala.homecinema",
+    "productName": "HomeCinema",
+    "directories": {
+      "output": "build",
+      "buildResources": "assets"
+    },
+    "extraMetadata": {
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "package.json",
+      ".env"
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "rpm",
+        "deb",
+        "AppImage",
+        "pacman"
+      ],
+      "icon": "assets/icon.png",
+      "category": "AudioVideo",
+      "executableName": "homecinema"
+    }
+  }
+}

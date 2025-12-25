@@ -1,0 +1,71 @@
+name: Build Electron App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-linux:
+    name: Build Linux (RPM, AppImage,DEB,PACMAN)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build:ts
+
+      - name: Rebuild native modules
+        run: npx electron-builder install-app-deps
+
+      - name: Build Linux
+        run: npx electron-builder --linux rpm AppImage deb
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: linux-build
+          path: build/*
+  build-windows:
+    name: Build Windows (NSIS)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build:ts
+
+      - name: Rebuild native modules
+        run: npx electron-builder install-app-deps
+
+      - name: Build Windows
+        run: npx electron-builder --win nsis
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-build
+          path: build/*
