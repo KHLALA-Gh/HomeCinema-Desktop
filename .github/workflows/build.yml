@@ -29,10 +29,11 @@ jobs:
 
       - name: Rebuild native modules
         run: npx electron-builder install-app-deps
-
+      - name: Create .env
+        run: |
+          echo "TMDB_KEY=${{ secrets.TMDB_KEY }}" > .env
       - name: Build Linux
         env:
-          TMDB_KEY: ${{ secrets.TMDB_KEY }}
           NODE_ENV: production
         run: npx electron-builder --linux rpm AppImage deb
 
@@ -63,10 +64,11 @@ jobs:
 
       - name: Rebuild native modules
         run: npx electron-builder install-app-deps
-
+      - name: Create .env
+        run: |
+          echo "TMDB_KEY=${{ secrets.TMDB_KEY }}" > .env
       - name: Build Windows
         env:
-          TMDB_KEY: ${{ secrets.TMDB_KEY }}
           NODE_ENV: production
         run: npx electron-builder --win nsis
 
