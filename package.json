@@ -18,7 +18,9 @@
   "description": "Home Cinema Desktop App",
   "dependencies": {
     "@home-cinema/app": "^0.0.2",
+    "axios": "^1.13.2",
     "dotenv": "^17.2.3",
+    "electron-store": "^11.0.2",
     "get-port": "^7.1.0"
   },
   "devDependencies": {
