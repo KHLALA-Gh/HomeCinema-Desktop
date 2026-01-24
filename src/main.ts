@@ -14,6 +14,8 @@ import env from "dotenv";
 import { ChildProcess, fork } from "node:child_process";
 import Store from "electron-store";
 import axios, { AxiosError } from "axios";
+import { openVLC } from "./lib/vlc.js";
+import { fetchDownloads } from "./lib/streamer.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -22,9 +24,10 @@ let tray: Tray | null = null;
 let serverProcess: ChildProcess | null;
 let port: number;
 let serverCleanedUp = false;
+let downloadFetchInterval: NodeJS.Timeout;
 let getTheLock = app.requestSingleInstanceLock();
 const store = new Store();
-
+let torrentSet = false;
 function cleanupServerProcess(proc: ChildProcess | null) {
   if (!proc || serverCleanedUp) return;
   serverCleanedUp = true;
@@ -59,35 +62,65 @@ env.config({
 
 /* ---------------- SERVER ---------------- */
 
-async function createServer(port: number) {
+function createServer(port: number) {
   const serverFilePath = path.join(app.getAppPath(), "dist/server.js");
-  serverProcess = fork(path.join(serverFilePath), [], {
+
+  serverProcess = fork(serverFilePath, [], {
     stdio: "inherit",
     env: { ...process.env, NODE_ENV: "production" },
   });
+
   serverCleanedUp = false;
-  if (!serverProcess) return false;
 
-  serverProcess.send({ type: "START_SERVER", port });
-  if (serverProcess.stdout) {
-    serverProcess.stdout.on("", (data) => {
-      process.stdout.write(`[Server]: ${data}`);
-    });
+  return new Promise<void>((res, rej) => {
+    if (!serverProcess) throw new Error("No server process");
 
-    serverProcess.on("exit", (code) => {
+    let resolved = false;
+
+    const t = setTimeout(() => {
+      resolved = true;
+      rej(new Error("TIMEOUT: Server didn't respond with ready status"));
+    }, 20_000);
+
+    const exitFn = (code: number | null) => {
       console.log(`[Server]: server process exited with code ${code}`);
       cleanupServerProcess(serverProcess);
-    });
-  }
-  return new Promise<boolean>((res) => {
-    if (!serverProcess) return res(false);
-    serverProcess.once("message", (msg) => {
-      //@ts-ignore
-      if (msg.status === "ready") {
-        return res(true);
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(t);
+        rej(new Error("server exited"));
       }
-      res(false);
+    };
+
+    const messageFn = (msg: any) => {
+      if (msg?.status === "ready" && !resolved) {
+        resolved = true;
+        clearTimeout(t);
+        serverProcess?.removeListener("exit", exitFn);
+        serverProcess?.removeListener("message", messageFn);
+        res();
+      }
+    };
+
+    serverProcess.on("exit", exitFn);
+    serverProcess.on("message", messageFn);
+
+    serverProcess.on("error", (err) => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(t);
+        rej(err);
+      }
     });
+
+    let sent = serverProcess.send({ type: "START_SERVER", port });
+    if (sent) {
+      console.log("waiting for server to respond");
+    } else {
+      resolved = true;
+      cleanupServerProcess(serverProcess);
+      rej(new Error("cannot send START_SERVER signal"));
+    }
   });
 }
 
@@ -109,9 +142,6 @@ async function createWindow(port: number, reload?: boolean) {
       preload: path.join(app.getAppPath(), "dist/preload.js"),
     },
   });
-
-  await mainWindow.loadURL(`http://localhost:${port}`);
-
   // Hide instead of close
   mainWindow.on("close", (event) => {
     //@ts-ignore
@@ -124,6 +154,11 @@ async function createWindow(port: number, reload?: boolean) {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+  try {
+    await mainWindow.loadURL(`http://localhost:${port}`);
+  } catch (err: any) {
+    dialog.showErrorBox("Error when loading page", err.code);
+  }
 }
 
 /* ---------------- TRAY ---------------- */
@@ -183,10 +218,14 @@ if (!getTheLock) {
 
     return result.canceled ? null : result.filePaths[0];
   });
+  ipcMain.handle("open-vlc", (e, streams: string[]) => {
+    openVLC(streams);
+  });
   app.whenReady().then(async () => {
     try {
       createTray();
-      port = await getPort();
+      //@ts-ignore
+      port = 8081 || (await getPort());
       // await createServer(port);
       await createWindow(5173);
       await setSavedTorrents();
@@ -196,8 +235,10 @@ if (!getTheLock) {
     } catch (err) {
       if (err instanceof AxiosError) {
         dialog.showErrorBox("Error when booting app", err.message);
+      } else if (err instanceof Error) {
+        dialog.showErrorBox("Error when booting app", err.message);
       } else {
-        dialog.showErrorBox("Error when closing app", "unknown error");
+        dialog.showErrorBox("Error when booting app", "unknown error");
       }
       console.error(err);
     }
@@ -243,14 +284,10 @@ app.on("activate", () => {
 
 app.on("before-quit", async (e) => {
   try {
+    if (downloadFetchInterval) clearInterval(downloadFetchInterval);
+    if (!torrentSet) return app.exit(0);
     e.preventDefault();
-    const resp = await axios.get(`http://localhost:8081/api/downloads`, {
-      timeout: 5 * 1000,
-    });
-    if (resp.status === 200) {
-      console.log(resp.data);
-      store.set("downloads", resp.data);
-    }
+    await fetchDownloads(port, store);
     app.exit(0);
   } catch (err: any) {
     if (err instanceof AxiosError) {
@@ -269,8 +306,15 @@ app.on("before-quit", async (e) => {
 });
 
 async function setSavedTorrents() {
+  downloadFetchInterval = setInterval(async () => {
+    await fetchDownloads(port, store);
+    torrentSet = true;
+  }, 30_000);
   const downloads = store.get("downloads", []) as [];
-  if (!downloads.length) return;
+  if (!downloads.length) {
+    torrentSet = true;
+    return;
+  }
   new Notification({
     title: "HomeCinema",
     body: "Setting saved downloads...",
@@ -278,6 +322,9 @@ async function setSavedTorrents() {
   const resp = await axios.post(`http://localhost:8081/api/downloads`, {
     downloads,
   });
+  if (resp.status === 200) {
+    torrentSet = true;
+  }
   new Notification({
     title: "HomeCinema",
     body: `${resp.data.setCount} torrents are setted`,

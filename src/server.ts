@@ -11,12 +11,11 @@ process.on("message", async (e: any) => {
   const { type, port } = e;
 
   if (type === "START_SERVER") {
-    await createServer(port);
-
-    process.send?.({
-      status: "ready",
-      url: `http://localhost:${port}`,
-    });
+    // await createServer(port);
+    // process.send?.({
+    //   status: "ready",
+    //   url: `http://localhost:${port}`,
+    // });
   }
   if (type === "SHUTDOWN") {
     console.log(`shutting down server...`);
