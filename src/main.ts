@@ -6,6 +6,7 @@ import {
   ipcMain,
   dialog,
   Notification,
+  shell,
 } from "electron";
 import path from "node:path";
 import getPort from "get-port";
@@ -218,6 +219,11 @@ if (!getTheLock) {
 
     return result.canceled ? null : result.filePaths[0];
   });
+  ipcMain.handle("open-folder", async (e, path: string) => {
+    const err = await shell.openPath(path);
+
+    if (err) throw err;
+  });
   ipcMain.handle("open-vlc", (e, streams: string[]) => {
     openVLC(streams);
   });
@@ -287,7 +293,7 @@ app.on("before-quit", async (e) => {
     if (downloadFetchInterval) clearInterval(downloadFetchInterval);
     if (!torrentSet) return app.exit(0);
     e.preventDefault();
-    await fetchDownloads(port, store);
+    await fetchDownloads(port, store, { ignoreComplete: true });
     app.exit(0);
   } catch (err: any) {
     if (err instanceof AxiosError) {
