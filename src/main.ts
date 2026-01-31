@@ -17,6 +17,7 @@ import Store from "electron-store";
 import axios, { AxiosError } from "axios";
 import { openVLC } from "./lib/vlc.js";
 import { fetchDownloads } from "./lib/streamer.js";
+import AppUpdater from "./lib/autoUpdater.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -27,6 +28,8 @@ let port: number;
 let serverCleanedUp = false;
 let downloadFetchInterval: NodeJS.Timeout;
 let getTheLock = app.requestSingleInstanceLock();
+let autoUpdater = new AppUpdater();
+
 const store = new Store();
 let torrentSet = false;
 function cleanupServerProcess(proc: ChildProcess | null) {
@@ -51,7 +54,6 @@ async function quitApp() {
     mainWindow = null;
   }
 
-  await shutdownServer();
   tray?.destroy();
   tray = null;
   app.quit();
@@ -230,15 +232,14 @@ if (!getTheLock) {
   app.whenReady().then(async () => {
     try {
       createTray();
-      //@ts-ignore
-      port = 8081 || (await getPort());
-      // await createServer(port);
-      await createWindow(5173);
+      port = await getPort();
+      await createServer(port);
+      await createWindow(port);
       await setSavedTorrents();
       mainWindow?.once("ready-to-show", () => {
         createTray();
       });
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof AxiosError) {
         dialog.showErrorBox("Error when booting app", err.message);
       } else if (err instanceof Error) {
@@ -246,7 +247,7 @@ if (!getTheLock) {
       } else {
         dialog.showErrorBox("Error when booting app", "unknown error");
       }
-      console.error(err);
+      console.error(err?.message);
     }
   });
 }
@@ -294,8 +295,10 @@ app.on("before-quit", async (e) => {
     if (!torrentSet) return app.exit(0);
     e.preventDefault();
     await fetchDownloads(port, store, { ignoreComplete: true });
+    await shutdownServer();
     app.exit(0);
   } catch (err: any) {
+    console.log(err);
     if (err instanceof AxiosError) {
       dialog.showErrorBox(
         "Error when closing app",
@@ -325,7 +328,7 @@ async function setSavedTorrents() {
     title: "HomeCinema",
     body: "Setting saved downloads...",
   }).show();
-  const resp = await axios.post(`http://localhost:8081/api/downloads`, {
+  const resp = await axios.post(`http://localhost:${port}/api/downloads`, {
     downloads,
   });
   if (resp.status === 200) {

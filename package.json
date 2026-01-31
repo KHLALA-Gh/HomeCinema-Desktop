@@ -17,10 +17,12 @@
   "license": "Apache-2.0",
   "description": "Home Cinema Desktop App",
   "dependencies": {
-    "@home-cinema/app": "^0.0.2",
+    "@home-cinema/app": "^0.0.6-beta.2",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
+    "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
+    "electron-updater": "^6.7.3",
     "get-port": "^7.1.0"
   },
   "devDependencies": {
@@ -32,7 +34,13 @@
   "build": {
     "appId": "com.khlala.homecinema",
     "productName": "HomeCinema",
-    "publish": null,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "KHLALA-Gh",
+        "repo": "HomeCinema-Desktop"
+      }
+    ],
     "directories": {
       "output": "build",
       "buildResources": "assets"
