@@ -142,7 +142,7 @@ async function createWindow(port: number, reload?: boolean) {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(app.getAppPath(), "dist/preload.js"),
+      preload: path.join(app.getAppPath(), "assets/preload.js"),
     },
   });
   // Hide instead of close
