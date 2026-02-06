@@ -1,23 +1,14 @@
-import {
-  app,
-  BrowserWindow,
-  Tray,
-  Menu,
-  ipcMain,
-  dialog,
-  Notification,
-  shell,
-} from "electron";
+import { app, BrowserWindow, Tray, Menu, dialog, Notification } from "electron";
 import path from "node:path";
 import getPort from "get-port";
 import { fileURLToPath } from "node:url";
 import env from "dotenv";
 import { ChildProcess, fork } from "node:child_process";
-import Store from "electron-store";
 import axios, { AxiosError } from "axios";
-import { openVLC } from "./lib/vlc.js";
 import { fetchDownloads } from "./lib/streamer.js";
 import AppUpdater from "./lib/autoUpdater.js";
+import { AppStore } from "./lib/store.js";
+import { initIpcHandlers } from "./lib/ipc.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -30,7 +21,7 @@ let downloadFetchInterval: NodeJS.Timeout;
 let getTheLock = app.requestSingleInstanceLock();
 let autoUpdater = new AppUpdater();
 
-const store = new Store();
+const store = new AppStore();
 let torrentSet = false;
 function cleanupServerProcess(proc: ChildProcess | null) {
   if (!proc || serverCleanedUp) return;
@@ -158,7 +149,8 @@ async function createWindow(port: number, reload?: boolean) {
     mainWindow = null;
   });
   try {
-    await mainWindow.loadURL(`http://localhost:${port}`);
+    const file = path.join(app.getAppPath(), "assets/loading.html");
+    await mainWindow.loadFile(file);
   } catch (err: any) {
     dialog.showErrorBox("Error when loading page", err.code);
   }
@@ -214,27 +206,15 @@ if (!getTheLock) {
     }
   });
 
-  ipcMain.handle("select-folder", async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ["openDirectory"],
-    });
-
-    return result.canceled ? null : result.filePaths[0];
-  });
-  ipcMain.handle("open-folder", async (e, path: string) => {
-    const err = await shell.openPath(path);
-
-    if (err) throw err;
-  });
-  ipcMain.handle("open-vlc", (e, streams: string[]) => {
-    openVLC(streams);
-  });
   app.whenReady().then(async () => {
     try {
-      createTray();
       port = await getPort();
-      await createServer(port);
       await createWindow(port);
+      createTray();
+      initIpcHandlers(store);
+      await createServer(port);
+
+      if (mainWindow) mainWindow.loadURL(`http://localhost:${port}`);
       await setSavedTorrents();
       mainWindow?.once("ready-to-show", () => {
         createTray();
