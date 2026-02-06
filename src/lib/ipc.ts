@@ -15,8 +15,8 @@ export function initIpcHandlers(store: AppStore) {
 
     if (err) throw err;
   });
-  ipcMain.handle("open-vlc", (e, streams: string[]) => {
-    openVLC(streams);
+  ipcMain.handle("open-vlc", async (e, streams: string[]) => {
+    await openVLC(streams);
   });
   ipcMain.handle("save-movie", (e, movie: Movie) => {
     store.saveMovie(movie);

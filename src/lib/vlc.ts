@@ -1,5 +1,5 @@
 import { openApp } from "open";
 
-export function openVLC(streams: string[]) {
-  openApp("vlc", { arguments: streams });
+export async function openVLC(streams: string[]) {
+  await openApp("vlc", { arguments: streams });
 }
