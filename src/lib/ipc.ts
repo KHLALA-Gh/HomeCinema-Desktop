@@ -1,14 +1,19 @@
 import { dialog, ipcMain, shell } from "electron";
 import { openVLC } from "./vlc.js";
-import { AppStore, Movie, Torrent, TVShow } from "./store.js";
+import { AppStore, DownloadHistory, Movie, Torrent, TVShow } from "./store.js";
+import fs from "fs";
+import path from "path";
+import axios from "axios";
 
 export function initIpcHandlers(store: AppStore) {
   ipcMain.handle("select-folder", async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openDirectory"],
     });
-
     return result.canceled ? null : result.filePaths[0];
+  });
+  ipcMain.handle("dh:path", (_) => {
+    return store.getDownloadDir();
   });
   ipcMain.handle("open-folder", async (e, path: string) => {
     const err = await shell.openPath(path);
@@ -53,5 +58,33 @@ export function initIpcHandlers(store: AppStore) {
   });
   ipcMain.handle("delete-saved-torrent", (e, hash: string) => {
     return store.deleteTorrent(hash);
+  });
+  ipcMain.handle("dh:get", (e, hash: string) => {
+    return store.getDownloadHistoryByHash(hash);
+  });
+  ipcMain.handle("dh:get-all", (e) => {
+    let torrents = store.getHistory();
+    torrents.forEach((t) => {
+      if (!fs.existsSync(path.join(t.path, t.name))) {
+        store.deleteDownloadHistoryByHash(t.infoHash);
+      }
+    });
+    return torrents;
+  });
+  ipcMain.handle("dh:set", (e, hash: string, d: DownloadHistory) => {
+    console.log(store.getHistory());
+
+    return store.setDownloadHistoryByHash(hash, d);
+  });
+  ipcMain.handle("dh:delete", async (e, hash: string) => {
+    let t = store.getDownloadHistoryByHash(hash);
+    if (!t) return;
+    store.deleteDownloadHistoryByHash(hash);
+    let p = path.join(t.path, t.name || "undefined");
+    if (fs.existsSync(p)) {
+      fs.rmSync(p, { recursive: true });
+    }
+    // TODO : change it with something more dynamic
+    await axios.delete(`http://localhost:5173/api/downloads/${hash}`);
   });
 }

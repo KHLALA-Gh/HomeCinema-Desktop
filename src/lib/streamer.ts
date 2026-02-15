@@ -1,6 +1,6 @@
 import axios from "axios";
 import Store from "electron-store";
-interface FetchDownloadsOpts {
+export interface FetchDownloadsOpts {
   ignoreComplete: boolean;
 }
 export async function fetchDownloads(

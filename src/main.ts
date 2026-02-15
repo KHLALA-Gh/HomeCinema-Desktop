@@ -1,17 +1,12 @@
+console.log(`${getTime()} : Starting...`);
 import { app, BrowserWindow, Tray, Menu, dialog, Notification } from "electron";
 import path from "node:path";
-import getPort from "get-port";
-import { fileURLToPath } from "node:url";
-import env from "dotenv";
-import { ChildProcess, fork } from "node:child_process";
-import axios, { AxiosError } from "axios";
+import type { ChildProcess } from "node:child_process";
+import type { Axios } from "axios";
 import { fetchDownloads } from "./lib/streamer.js";
-import AppUpdater from "./lib/autoUpdater.js";
-import { AppStore } from "./lib/store.js";
-import { initIpcHandlers } from "./lib/ipc.js";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+import type { AppStore } from "./lib/store.js";
+import type AppUpdater from "./lib/autoUpdater.js";
+let appUpdater: AppUpdater;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let serverProcess: ChildProcess | null;
@@ -19,10 +14,15 @@ let port: number;
 let serverCleanedUp = false;
 let downloadFetchInterval: NodeJS.Timeout;
 let getTheLock = app.requestSingleInstanceLock();
-let autoUpdater = new AppUpdater();
-
-const store = new AppStore();
+let axios: Axios;
+let store: AppStore;
 let torrentSet = false;
+console.log(`${getTime()} : Modules imported`);
+
+function getTime() {
+  return new Date().toLocaleTimeString(undefined, { hour12: false });
+}
+
 function cleanupServerProcess(proc: ChildProcess | null) {
   if (!proc || serverCleanedUp) return;
   serverCleanedUp = true;
@@ -50,17 +50,13 @@ async function quitApp() {
   app.quit();
 }
 
-env.config({
-  path: path.join(app.getAppPath(), ".env"),
-});
-
 /* ---------------- SERVER ---------------- */
 
-function createServer(port: number) {
+async function createServer(port: number) {
   const serverFilePath = path.join(app.getAppPath(), "dist/server.js");
-
+  const { fork } = await import("node:child_process");
   serverProcess = fork(serverFilePath, [], {
-    stdio: "inherit",
+    stdio: "ignore",
     env: { ...process.env, NODE_ENV: "production" },
   });
 
@@ -132,6 +128,7 @@ async function createWindow(port: number, reload?: boolean) {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: true,
     webPreferences: {
       preload: path.join(app.getAppPath(), "assets/preload.js"),
     },
@@ -171,7 +168,7 @@ function createTray() {
         app.isQuiting = false;
         let reload = !serverProcess;
         if (!serverProcess) {
-          port = await getPort();
+          await loadModules();
           console.log("recreating the server process");
           await createServer(port);
         }
@@ -208,21 +205,35 @@ if (!getTheLock) {
 
   app.whenReady().then(async () => {
     try {
-      port = await getPort();
+      console.log(`${getTime()} : App is ready`);
+      console.log(`${getTime()} : Creating window...`);
+
       await createWindow(port);
       createTray();
-      initIpcHandlers(store);
-      await createServer(port);
+      console.log(`${getTime()} : Loading modules...`);
 
-      if (mainWindow) mainWindow.loadURL(`http://localhost:${port}`);
+      await loadModules();
+      console.log(`${getTime()} : Creating server...`);
+
+      await createServer(port);
+      console.log(`${getTime()} : loading window url...`);
+      const currentVersion = app.getVersion();
+      const lastVersion = store.get("lastVersion");
+      let url: string;
+      if (lastVersion && lastVersion != currentVersion) {
+        url = `http://localhost:${port}/new-update`;
+      } else {
+        url = `http://localhost:${port}`;
+      }
+      store.set("lastVersion", currentVersion);
+
+      if (mainWindow) mainWindow.loadURL(url);
+      console.log(`${getTime()} : sending torrents...`);
+
       await setSavedTorrents();
-      mainWindow?.once("ready-to-show", () => {
-        createTray();
-      });
+      console.log(`${getTime()} : successfully booted`);
     } catch (err: any) {
-      if (err instanceof AxiosError) {
-        dialog.showErrorBox("Error when booting app", err.message);
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         dialog.showErrorBox("Error when booting app", err.message);
       } else {
         dialog.showErrorBox("Error when booting app", "unknown error");
@@ -279,7 +290,7 @@ app.on("before-quit", async (e) => {
     app.exit(0);
   } catch (err: any) {
     console.log(err);
-    if (err instanceof AxiosError) {
+    if (err instanceof Error) {
       dialog.showErrorBox(
         "Error when closing app",
         "cannot save torrents data correctly\n" + err.message,
@@ -318,4 +329,20 @@ async function setSavedTorrents() {
     title: "HomeCinema",
     body: `${resp.data.setCount} torrents are setted`,
   }).show();
+}
+
+async function loadModules() {
+  const AppUpdater = (await import("./lib/autoUpdater.js")).default;
+  appUpdater = new AppUpdater();
+  const { AppStore } = await import("./lib/store.js");
+  store = new AppStore();
+  const { initIpcHandlers } = await import("./lib/ipc.js");
+  initIpcHandlers(store);
+  const env = (await import("dotenv")).default;
+  env.config({
+    path: path.join(app.getAppPath(), ".env"),
+  });
+  let getPort = (await import("get-port")).default;
+  port = 5173; //await getPort();
+  axios = (await import("axios")).default;
 }

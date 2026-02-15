@@ -1,12 +1,12 @@
 {
   "name": "homecinema",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc && cross-env NODE_ENV=production electron .",
-    "build": "npm run build:ts && electron-builder",
+    "build": "npm run build:ts && electron-builder --linux AppImage",
     "build:ts": "tsc"
   },
   "author": {
