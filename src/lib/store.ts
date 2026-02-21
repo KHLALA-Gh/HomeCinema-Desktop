@@ -1,6 +1,6 @@
 import { app } from "electron";
 import Store from "electron-store";
-import fs from "fs";
+import fs from "fs-extra";
 import path from "path";
 
 export interface DownloadHistory {
@@ -108,7 +108,7 @@ export class AppStore extends Store {
       this.set(this.torrentKey, Array.from(this.torrents) as TorrentsEntries);
   }
   getHistory() {
-    return this.downloadHistory;
+    return new Map(this.downloadHistory);
   }
   getDownloadHistoryByHash(hash: string) {
     return this.downloadHistory.get(hash.toLowerCase());
@@ -128,10 +128,12 @@ export class AppStore extends Store {
   changeDownloadDir(newDir: string) {
     if (!fs.existsSync(newDir))
       throw new Error("new directory doesn't exists : " + newDir);
+    if (!fs.statSync(newDir).isDirectory())
+      throw new Error("new directory is not a directory");
+
     if (!fs.existsSync(this.downloadDir))
       throw new Error("old directory doesn't exists : " + this.downloadDir);
-    fs.cpSync(this.downloadDir, newDir);
-    fs.rmSync(this.downloadDir);
+    fs.moveSync(this.downloadDir, newDir, { overwrite: true });
     this.set(this.downloadDirKey, newDir);
     this.downloadDir = newDir;
   }

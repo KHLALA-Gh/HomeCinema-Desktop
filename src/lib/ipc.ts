@@ -64,10 +64,36 @@ export function initIpcHandlers(store: AppStore) {
   });
   ipcMain.handle("dh:get-all", (e) => {
     let torrents = store.getHistory();
+    let dirPath = store.getDownloadDir();
+    let folders = fs.readdirSync(dirPath);
+    folders = folders.filter((f) => {
+      const fullPath = path.join(dirPath, f);
+      return fs.statSync(fullPath).isDirectory();
+    });
+    const foldersSet = new Set(folders);
     torrents.forEach((t) => {
-      if (!fs.existsSync(path.join(t.path, t.name))) {
+      if (!foldersSet.has(t.name)) {
         store.deleteDownloadHistoryByHash(t.infoHash);
+      } else {
+        let p = path.join(t.path, t.name);
+        let p2 = path.join(dirPath, t.name);
+        if (
+          path.normalize(path.resolve(p)) !== path.normalize(path.resolve(p2))
+        ) {
+          store.deleteDownloadHistoryByHash(t.infoHash);
+        }
       }
+      foldersSet.delete(t.name);
+    });
+    let i = 0;
+    console.log(foldersSet);
+    foldersSet.forEach((f) => {
+      torrents.set(`unknown:${i}`, {
+        infoHash: `unknown:${i}`,
+        name: f,
+        path: dirPath,
+      });
+      i++;
     });
     return torrents;
   });
@@ -76,6 +102,7 @@ export function initIpcHandlers(store: AppStore) {
 
     return store.setDownloadHistoryByHash(hash, d);
   });
+  // TODO : Change to delete with path.
   ipcMain.handle("dh:delete", async (e, hash: string) => {
     let t = store.getDownloadHistoryByHash(hash);
     if (!t) return;
@@ -86,5 +113,8 @@ export function initIpcHandlers(store: AppStore) {
     }
     // TODO : change it with something more dynamic
     await axios.delete(`http://localhost:5173/api/downloads/${hash}`);
+  });
+  ipcMain.handle("dh:change-dir", (_, newDir) => {
+    store.changeDownloadDir(newDir);
   });
 }

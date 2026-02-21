@@ -23,6 +23,7 @@
     "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.7.3",
+    "fs-extra": "^11.3.3",
     "get-port": "^7.1.0",
     "open": "^11.0.0"
   },

@@ -32,4 +32,6 @@ contextBridge.exposeInMainWorld("electron", {
   deleteDH: (hash) => ipcRenderer.invoke("dh:delete", hash),
   getAllDH: async () => await ipcRenderer.invoke("dh:get-all"),
   getDHPath: async () => await ipcRenderer.invoke("dh:path"),
+  changeDHDir: async (newDir) =>
+    await ipcRenderer.invoke("dh:change-dir", newDir),
 });
