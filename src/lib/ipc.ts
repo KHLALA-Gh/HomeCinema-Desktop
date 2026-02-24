@@ -98,8 +98,6 @@ export function initIpcHandlers(store: AppStore) {
     return torrents;
   });
   ipcMain.handle("dh:set", (e, hash: string, d: DownloadHistory) => {
-    console.log(store.getHistory());
-
     return store.setDownloadHistoryByHash(hash, d);
   });
   // TODO : Change to delete with path.
@@ -114,7 +112,16 @@ export function initIpcHandlers(store: AppStore) {
     // TODO : change it with something more dynamic
     await axios.delete(`http://localhost:5173/api/downloads/${hash}`);
   });
-  ipcMain.handle("dh:change-dir", (_, newDir) => {
-    store.changeDownloadDir(newDir);
+  ipcMain.handle("dh:change-dir", async (_, newDir) => {
+    try {
+      await store.changeDownloadDir(newDir);
+    } catch (err: any) {
+      let msg = "unknown error";
+      if (typeof err.message === "string") {
+        msg = err.message;
+      }
+      dialog.showErrorBox("Cannot change library folder", msg);
+      throw err;
+    }
   });
 }

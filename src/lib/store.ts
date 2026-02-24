@@ -1,7 +1,30 @@
+import { randomUUID } from "crypto";
 import { app } from "electron";
 import Store from "electron-store";
 import fs from "fs-extra";
 import path from "path";
+
+async function moveContentsSafe(srcDir: string, destDir: string) {
+  if (path.resolve(srcDir) === path.resolve(destDir)) {
+    throw new Error("Source and destination cannot be the same");
+  }
+
+  const items = await fs.readdir(srcDir);
+
+  for (const item of items) {
+    const srcPath = path.join(srcDir, item);
+    if (path.resolve(srcPath) === path.resolve(destDir)) {
+      continue;
+    }
+    let itemName = item;
+    if (fs.existsSync(path.join(destDir, item))) {
+      itemName += " copy-" + randomUUID();
+    }
+    await fs.move(path.join(srcDir, item), path.join(destDir, itemName), {
+      overwrite: true,
+    });
+  }
+}
 
 export interface DownloadHistory {
   infoHash: string;
@@ -125,15 +148,28 @@ export class AppStore extends Store {
     this.downloadHistory.set(hash.toLowerCase(), d);
     this.set(this.downloadHistoryKey, Array.from(this.downloadHistory));
   }
-  changeDownloadDir(newDir: string) {
+  async changeDownloadDir(newDir: string) {
     if (!fs.existsSync(newDir))
       throw new Error("new directory doesn't exists : " + newDir);
     if (!fs.statSync(newDir).isDirectory())
       throw new Error("new directory is not a directory");
 
-    if (!fs.existsSync(this.downloadDir))
-      throw new Error("old directory doesn't exists : " + this.downloadDir);
-    fs.moveSync(this.downloadDir, newDir, { overwrite: true });
+    if (!fs.existsSync(this.downloadDir)) {
+      this.downloadDir = newDir;
+      this.set(this.downloadDirKey, newDir);
+      throw new Error(
+        "old directory doesn't exists : " +
+          this.downloadDir +
+          "\ncreating new empty directory",
+      );
+    }
+    await moveContentsSafe(this.downloadDir, newDir);
+    const resolvedSrc = path.resolve(this.downloadDir);
+    const resolvedDest = path.resolve(newDir);
+
+    if (!resolvedDest.startsWith(resolvedSrc)) {
+      fs.removeSync(this.downloadDir);
+    }
     this.set(this.downloadDirKey, newDir);
     this.downloadDir = newDir;
   }
