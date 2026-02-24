@@ -86,7 +86,7 @@ export function initIpcHandlers(store: AppStore) {
       foldersSet.delete(t.name);
     });
     let i = 0;
-    console.log(foldersSet);
+    console.log(torrents);
     foldersSet.forEach((f) => {
       torrents.set(`unknown:${i}`, {
         infoHash: `unknown:${i}`,

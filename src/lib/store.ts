@@ -172,6 +172,15 @@ export class AppStore extends Store {
     }
     this.set(this.downloadDirKey, newDir);
     this.downloadDir = newDir;
+    let torrents = this.getHistory();
+    torrents.forEach((t, hash) => {
+      torrents.set(hash, {
+        ...t,
+        path: newDir,
+      });
+    });
+    this.downloadHistory = torrents;
+    this.set(this.downloadHistoryKey, Array.from(torrents));
   }
   getDownloadDir() {
     return this.downloadDir;
