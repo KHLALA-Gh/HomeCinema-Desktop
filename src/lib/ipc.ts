@@ -101,16 +101,18 @@ export function initIpcHandlers(store: AppStore) {
     return store.setDownloadHistoryByHash(hash, d);
   });
   // TODO : Change to delete with path.
-  ipcMain.handle("dh:delete", async (e, hash: string) => {
-    let t = store.getDownloadHistoryByHash(hash);
-    if (!t) return;
-    store.deleteDownloadHistoryByHash(hash);
-    let p = path.join(t.path, t.name || "undefined");
+  ipcMain.handle("dh:delete", async (e, name: string) => {
+    let p = path.join(store.getDownloadDir(), name);
     if (fs.existsSync(p)) {
       fs.rmSync(p, { recursive: true });
     }
+    let history = store.deleteDownloadWithPath(p);
     // TODO : change it with something more dynamic
-    await axios.delete(`http://localhost:5173/api/downloads/${hash}`);
+    if (history) {
+      await axios.delete(
+        `http://localhost:5173/api/downloads/${history.infoHash}`,
+      );
+    }
   });
   ipcMain.handle("dh:change-dir", async (_, newDir) => {
     try {

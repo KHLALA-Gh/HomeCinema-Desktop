@@ -157,11 +157,7 @@ export class AppStore extends Store {
     if (!fs.existsSync(this.downloadDir)) {
       this.downloadDir = newDir;
       this.set(this.downloadDirKey, newDir);
-      throw new Error(
-        "old directory doesn't exists : " +
-          this.downloadDir +
-          "\ncreating new empty directory",
-      );
+      return;
     }
     await moveContentsSafe(this.downloadDir, newDir);
     const resolvedSrc = path.resolve(this.downloadDir);
@@ -184,5 +180,16 @@ export class AppStore extends Store {
   }
   getDownloadDir() {
     return this.downloadDir;
+  }
+  deleteDownloadWithPath(p: string): DownloadHistory | undefined {
+    let d: DownloadHistory | undefined = undefined;
+    this.downloadHistory.forEach((t, hash) => {
+      if (path.resolve(p) === path.resolve(path.join(t.path, t.name))) {
+        this.downloadHistory.delete(hash);
+        this.set(this.downloadHistoryKey, Array.from(this.downloadHistory));
+        d = t;
+      }
+    });
+    return d;
   }
 }
