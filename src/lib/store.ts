@@ -30,6 +30,8 @@ export interface DownloadHistory {
   infoHash: string;
   name: string;
   path: string;
+  size: number;
+  date: number;
 }
 
 export interface Movie {

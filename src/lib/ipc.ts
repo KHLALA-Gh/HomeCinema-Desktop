@@ -3,7 +3,8 @@ import { openVLC } from "./vlc.js";
 import { AppStore, DownloadHistory, Movie, Torrent, TVShow } from "./store.js";
 import fs from "fs";
 import path from "path";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import getFolderSize from "get-folder-size";
 
 export function initIpcHandlers(store: AppStore) {
   ipcMain.handle("select-folder", async () => {
@@ -83,15 +84,17 @@ export function initIpcHandlers(store: AppStore) {
           store.deleteDownloadHistoryByHash(t.infoHash);
         }
       }
+
       foldersSet.delete(t.name);
     });
     let i = 0;
-    console.log(torrents);
     foldersSet.forEach((f) => {
       torrents.set(`unknown:${i}`, {
         infoHash: `unknown:${i}`,
         name: f,
         path: dirPath,
+        size: 0,
+        date: 0,
       });
       i++;
     });
@@ -109,9 +112,17 @@ export function initIpcHandlers(store: AppStore) {
     let history = store.deleteDownloadWithPath(p);
     // TODO : change it with something more dynamic
     if (history) {
-      await axios.delete(
-        `http://localhost:5173/api/downloads/${history.infoHash}`,
-      );
+      try {
+        await axios.delete(
+          `http://localhost:5173/api/downloads/${history.infoHash}`,
+        );
+      } catch (err: any) {
+        if (err.status !== 404) {
+          throw new Error(
+            "unexpected error while deleting torrent from the streamer",
+          );
+        }
+      }
     }
   });
   ipcMain.handle("dh:change-dir", async (_, newDir) => {
@@ -126,4 +137,30 @@ export function initIpcHandlers(store: AppStore) {
       throw err;
     }
   });
+  ipcMain.handle(
+    "dh:torrent-prop",
+    async (_, infoHash): Promise<TorrentProps | null> => {
+      let torrent = store.getDownloadHistoryByHash(infoHash);
+      if (!torrent) return null;
+      let folderPath = path.join(torrent.path, torrent.name);
+      let res = await getFolderSize(folderPath);
+      return {
+        name: torrent.name,
+        infoHash: torrent.infoHash,
+        path: folderPath,
+        date: torrent.date,
+        size: torrent.size,
+        downloadedSize: res.size,
+      };
+    },
+  );
+}
+
+interface TorrentProps {
+  name: string;
+  infoHash: string;
+  date: number;
+  size: number;
+  downloadedSize: number;
+  path: string;
 }

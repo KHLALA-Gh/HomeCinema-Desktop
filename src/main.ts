@@ -220,13 +220,13 @@ if (!getTheLock) {
       const currentVersion = app.getVersion();
       const lastVersion = store.get("lastVersion");
       let url: string;
-      if (lastVersion && lastVersion != currentVersion) {
-        url = `http://localhost:${port}/new-update`;
-      } else {
-        url = `http://localhost:${port}`;
-      }
+      //     if (lastVersion && lastVersion == currentVersion) {
+      //     url = `http://localhost:${port}/new-update`;
+      // } else {
+      // url = `http://localhost:${port}`;
+      // }
       store.set("lastVersion", currentVersion);
-
+      url = `http://localhost:${port}`;
       if (mainWindow) mainWindow.loadURL(url);
       console.log(`${getTime()} : sending torrents...`);
 

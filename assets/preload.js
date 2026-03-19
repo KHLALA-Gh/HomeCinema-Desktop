@@ -34,4 +34,6 @@ contextBridge.exposeInMainWorld("electron", {
   getDHPath: async () => await ipcRenderer.invoke("dh:path"),
   changeDHDir: async (newDir) =>
     await ipcRenderer.invoke("dh:change-dir", newDir),
+  getTorrentProps: async (infoHash) =>
+    await ipcRenderer.invoke("dh:torrent-prop", infoHash),
 });
