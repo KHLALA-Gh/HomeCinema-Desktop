@@ -73,18 +73,6 @@ export function initIpcHandlers(store: AppStore) {
     });
     const foldersSet = new Set(folders);
     torrents.forEach((t) => {
-      if (!foldersSet.has(t.name)) {
-        store.deleteDownloadHistoryByHash(t.infoHash);
-      } else {
-        let p = path.join(t.path, t.name);
-        let p2 = path.join(dirPath, t.name);
-        if (
-          path.normalize(path.resolve(p)) !== path.normalize(path.resolve(p2))
-        ) {
-          store.deleteDownloadHistoryByHash(t.infoHash);
-        }
-      }
-
       foldersSet.delete(t.name);
     });
     let i = 0;

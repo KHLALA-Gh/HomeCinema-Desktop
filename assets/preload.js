@@ -27,7 +27,7 @@ contextBridge.exposeInMainWorld("electron", {
 
   deleteSavedTorrent: (hash) =>
     ipcRenderer.invoke("delete-saved-torrent", hash),
-  getDH: (hash) => ipcRenderer.invoke("dh:get", hash),
+  getDH: async (hash) => await ipcRenderer.invoke("dh:get", hash),
   setDH: (hash, d) => ipcRenderer.invoke("dh:set", hash, d),
   deleteDH: (hash) => ipcRenderer.invoke("dh:delete", hash),
   getAllDH: async () => await ipcRenderer.invoke("dh:get-all"),
