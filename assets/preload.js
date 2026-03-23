@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld("electron", {
   getSavedTorrents: () => ipcRenderer.invoke("get-saved-torrents"),
 
   getSavedTorrent: (hash) => ipcRenderer.invoke("get-saved-torrent", hash),
+  setLibSet: async (set) => await ipcRenderer.invoke("dh:set-lib-set", set),
+  getLibSet: async () => await ipcRenderer.invoke("dh:get-lib-set"),
 
   deleteSavedTorrent: (hash) =>
     ipcRenderer.invoke("delete-saved-torrent", hash),

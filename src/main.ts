@@ -343,6 +343,6 @@ async function loadModules() {
     path: path.join(app.getAppPath(), ".env"),
   });
   let getPort = (await import("get-port")).default;
-  port = 5173; //await getPort();
+  port = await getPort();
   axios = (await import("axios")).default;
 }

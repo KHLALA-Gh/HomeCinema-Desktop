@@ -62,7 +62,8 @@ export class AppStore extends Store {
   private readonly downloadHistoryKey = "download-history";
   private readonly downloadDirKey = "download-dir";
   private downloadDir = "";
-
+  private librarySet = false;
+  private librarySetKey = "lib-set";
   constructor() {
     super();
     this.reloadCache();
@@ -87,6 +88,7 @@ export class AppStore extends Store {
     const movies = this.get<string>(this.moviesKey, []) as MovieEntries;
     const tvShows = this.get<string>(this.tvShowKey, []) as TVShowEntries;
     const torrents = this.get<string>(this.torrentKey, []) as TorrentsEntries;
+    this.librarySet = this.get<string>(this.librarySetKey, false) as boolean;
     this.downloadDir = this.get<string>(
       this.downloadDirKey,
       path.join(app.getPath("videos"), "homecinema"),
@@ -102,6 +104,13 @@ export class AppStore extends Store {
     this.downloadHistory = new Map(downloadHistory);
   }
 
+  getLibSet(): boolean {
+    return this.librarySet;
+  }
+  setLibSet(set: boolean) {
+    this.set(this.librarySetKey, set);
+    this.librarySet = set;
+  }
   getMovies(): Map<string, Movie> {
     return this.movies;
   }

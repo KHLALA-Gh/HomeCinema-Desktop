@@ -142,6 +142,12 @@ export function initIpcHandlers(store: AppStore) {
       };
     },
   );
+  ipcMain.handle("dh:set-lib-set", (_, set: boolean) => {
+    store.setLibSet(set);
+  });
+  ipcMain.handle("dh:get-lib-set", (_): boolean => {
+    return store.getLibSet();
+  });
 }
 
 interface TorrentProps {
