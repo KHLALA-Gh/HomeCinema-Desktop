@@ -91,13 +91,13 @@ export function initIpcHandlers(store: AppStore) {
   ipcMain.handle("dh:set", (e, hash: string, d: DownloadHistory) => {
     return store.setDownloadHistoryByHash(hash, d);
   });
-  // TODO : Change to delete with path.
-  ipcMain.handle("dh:delete", async (e, name: string) => {
-    let p = path.join(store.getDownloadDir(), name);
-    if (fs.existsSync(p)) {
-      fs.rmSync(p, { recursive: true });
+  ipcMain.handle("dh:delete", async (e, path: string) => {
+    if (fs.existsSync(path)) {
+      fs.rmSync(path, { recursive: true });
+    } else {
+      throw new Error("torrent path does not exist");
     }
-    let history = store.deleteDownloadWithPath(p);
+    let history = store.deleteDownloadWithPath(path);
     // TODO : change it with something more dynamic
     if (history) {
       try {
