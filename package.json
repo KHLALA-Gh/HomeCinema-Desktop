@@ -17,7 +17,7 @@
   "license": "Apache-2.0",
   "description": "Home Cinema Desktop App",
   "dependencies": {
-    "@home-cinema/app": "^0.0.6-beta.5",
+    "@home-cinema/app": "^0.0.6-beta.6",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
     "electron-log": "^5.4.3",

@@ -64,6 +64,8 @@ export class AppStore extends Store {
   private downloadDir = "";
   private librarySet = false;
   private librarySetKey = "lib-set";
+  private searchOp: "torrentio" | "torrent-agent" = "torrentio";
+  private searchOpKey = "search-op";
   constructor() {
     super();
     this.reloadCache();
@@ -89,6 +91,10 @@ export class AppStore extends Store {
     const tvShows = this.get<string>(this.tvShowKey, []) as TVShowEntries;
     const torrents = this.get<string>(this.torrentKey, []) as TorrentsEntries;
     this.librarySet = this.get<string>(this.librarySetKey, false) as boolean;
+    this.searchOp = this.get<string>(
+      this.searchOpKey,
+      "torrentio",
+    ) as typeof this.searchOp;
     this.downloadDir = this.get<string>(
       this.downloadDirKey,
       path.join(app.getPath("videos"), "homecinema"),
@@ -110,6 +116,13 @@ export class AppStore extends Store {
   setLibSet(set: boolean) {
     this.set(this.librarySetKey, set);
     this.librarySet = set;
+  }
+  getSearchOp(): typeof this.searchOp {
+    return this.searchOp;
+  }
+  setSearchOp(set: typeof this.searchOp) {
+    this.set(this.searchOpKey, set);
+    this.searchOp = set;
   }
   getMovies(): Map<string, Movie> {
     return this.movies;
@@ -164,30 +177,8 @@ export class AppStore extends Store {
       throw new Error("new directory doesn't exists : " + newDir);
     if (!fs.statSync(newDir).isDirectory())
       throw new Error("new directory is not a directory");
-
-    if (!fs.existsSync(this.downloadDir)) {
-      this.downloadDir = newDir;
-      this.set(this.downloadDirKey, newDir);
-      return;
-    }
-    await moveContentsSafe(this.downloadDir, newDir);
-    const resolvedSrc = path.resolve(this.downloadDir);
-    const resolvedDest = path.resolve(newDir);
-
-    if (!resolvedDest.startsWith(resolvedSrc)) {
-      fs.removeSync(this.downloadDir);
-    }
     this.set(this.downloadDirKey, newDir);
     this.downloadDir = newDir;
-    let torrents = this.getHistory();
-    torrents.forEach((t, hash) => {
-      torrents.set(hash, {
-        ...t,
-        path: newDir,
-      });
-    });
-    this.downloadHistory = torrents;
-    this.set(this.downloadHistoryKey, Array.from(torrents));
   }
   getDownloadDir() {
     return this.downloadDir;

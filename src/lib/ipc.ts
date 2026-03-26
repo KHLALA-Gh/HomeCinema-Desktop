@@ -92,12 +92,12 @@ export function initIpcHandlers(store: AppStore) {
     return store.setDownloadHistoryByHash(hash, d);
   });
   ipcMain.handle("dh:delete", async (e, path: string) => {
+    let history = store.deleteDownloadWithPath(path);
     if (fs.existsSync(path)) {
       fs.rmSync(path, { recursive: true });
     } else {
       throw new Error("torrent path does not exist");
     }
-    let history = store.deleteDownloadWithPath(path);
     // TODO : change it with something more dynamic
     if (history) {
       try {
@@ -148,6 +148,20 @@ export function initIpcHandlers(store: AppStore) {
   ipcMain.handle("dh:get-lib-set", (_): boolean => {
     return store.getLibSet();
   });
+  ipcMain.handle("filesystem:move", (_, src: string, dest: string) => {
+    if (!fs.existsSync(src)) throw new Error("source does not exist");
+    fs.cpSync(src, dest, { recursive: true });
+    fs.rmSync(src, { recursive: true });
+  });
+  ipcMain.handle("search:get-option", (_) => {
+    return store.getSearchOp();
+  });
+  ipcMain.handle(
+    "search:set-option",
+    (_, set: "torrentio" | "torrent-agent") => {
+      store.setSearchOp(set);
+    },
+  );
 }
 
 interface TorrentProps {

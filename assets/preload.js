@@ -25,7 +25,10 @@ contextBridge.exposeInMainWorld("electron", {
 
   getSavedTorrent: (hash) => ipcRenderer.invoke("get-saved-torrent", hash),
   setLibSet: async (set) => await ipcRenderer.invoke("dh:set-lib-set", set),
+  setSearchOp: async (set) =>
+    await ipcRenderer.invoke("search:set-option", set),
   getLibSet: async () => await ipcRenderer.invoke("dh:get-lib-set"),
+  getSearchOp: async () => await ipcRenderer.invoke("search:get-option"),
 
   deleteSavedTorrent: (hash) =>
     ipcRenderer.invoke("delete-saved-torrent", hash),
@@ -38,4 +41,6 @@ contextBridge.exposeInMainWorld("electron", {
     await ipcRenderer.invoke("dh:change-dir", newDir),
   getTorrentProps: async (infoHash) =>
     await ipcRenderer.invoke("dh:torrent-prop", infoHash),
+  move: async (src, dest) =>
+    await ipcRenderer.invoke("filesystem:move", src, dest),
 });
