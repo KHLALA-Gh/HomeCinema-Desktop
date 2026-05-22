@@ -227,7 +227,9 @@ if (!getTheLock) {
       // }
       store.set("lastVersion", currentVersion);
       url = `http://localhost:${port}`;
-      if (mainWindow) mainWindow.loadURL(url);
+      setTimeout(() => {
+        if (mainWindow) mainWindow.loadURL(url);
+      }, 2000);
       console.log(`${getTime()} : sending torrents...`);
 
       await setSavedTorrents();

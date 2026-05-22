@@ -6,8 +6,37 @@
     <title>Loading...</title>
   </head>
   <style>
+    @keyframes smoothAppear {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+
+        transform: translateY(0);
+      }
+    }
+    @keyframes grow {
+      from {
+        width: 100px;
+      }
+
+      to {
+        width: 100%;
+      }
+    }
+    .anim {
+      animation: smoothAppear 2s ease-in-out forwards;
+    }
+    .grow {
+      animation: grow 1s 1s ease-out forwards;
+      overflow: hidden;
+      width: 125px;
+    }
     body {
-      background-color: #1b1b1b;
+      background-color: #101010;
       overflow: hidden;
       font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
       user-select: none;
@@ -17,6 +46,7 @@
       justify-content: center;
       align-items: center;
       flex-direction: column;
+      overflow: hidden;
     }
     .full {
       width: 100%;
@@ -28,10 +58,12 @@
   </style>
   <body>
     <div class="full center">
-      <div class="center">
-        <img src="logo.png" alt="" width="500px" />
+      <div class="center anim">
+        <div class="grow">
+          <img src="logo.png" class="" alt="" width="500px" />
+        </div>
       </div>
-      <h1 id="loading">Loading...</h1>
+      <h1 id="loading">...</h1>
     </div>
   </body>
   <script>
@@ -39,7 +71,7 @@
     let i = 0;
     setInterval(() => {
       if (i === 4) i = 0;
-      loading.textContent = "Loading" + ".".repeat(i);
+      loading.textContent = ".".repeat(i + 1);
       i++;
     }, 1000);
   </script>
