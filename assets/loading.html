@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loading...</title>
+  </head>
+  <style>
+    @keyframes smoothAppear {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+
+        transform: translateY(0);
+      }
+    }
+    @keyframes grow {
+      from {
+        width: 100px;
+      }
+
+      to {
+        width: 100%;
+      }
+    }
+    .anim {
+      animation: smoothAppear 2s ease-in-out forwards;
+    }
+    .grow {
+      animation: grow 1s 1s ease-out forwards;
+      overflow: hidden;
+      width: 125px;
+    }
+    body {
+      background-color: #101010;
+      overflow: hidden;
+      font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+      user-select: none;
+    }
+    .center {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .full {
+      width: 100%;
+      height: 100vh;
+    }
+    h1 {
+      color: rgb(163, 163, 163);
+    }
+  </style>
+  <body>
+    <div class="full center">
+      <div class="center anim">
+        <div class="grow">
+          <img src="logo.png" class="" alt="" width="500px" />
+        </div>
+      </div>
+      <h1 id="loading">...</h1>
+    </div>
+  </body>
+  <script>
+    let loading = document.getElementById("loading");
+    let i = 0;
+    setInterval(() => {
+      if (i === 4) i = 0;
+      loading.textContent = ".".repeat(i + 1);
+      i++;
+    }, 1000);
+  </script>
+</html>

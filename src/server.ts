@@ -33,6 +33,10 @@ async function createServer(port: number) {
   const { bootServer } = await import("@home-cinema/app");
   server = await bootServer(port, {
     desktopMode: true,
+    version: {
+      name: "Alpha 7",
+      semVer: "0.0.7",
+    },
   });
   server?.on("connection", (socket) => {
     sockets.add(socket);

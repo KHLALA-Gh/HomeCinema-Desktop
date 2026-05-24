@@ -1,12 +1,12 @@
 {
   "name": "homecinema",
-  "version": "0.0.1",
+  "version": "0.2.0",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc && cross-env NODE_ENV=production electron .",
-    "build": "npm run build:ts && electron-builder",
+    "build": "npm run build:ts && electron-builder --linux AppImage",
     "build:ts": "tsc"
   },
   "author": {
@@ -17,13 +17,16 @@
   "license": "Apache-2.0",
   "description": "Home Cinema Desktop App",
   "dependencies": {
-    "@home-cinema/app": "^0.0.6-beta.2",
+    "@home-cinema/app": "^0.0.7-beta.1",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
     "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.7.3",
-    "get-port": "^7.1.0"
+    "fs-extra": "^11.3.3",
+    "get-folder-size": "^5.0.0",
+    "get-port": "^7.1.0",
+    "open": "^11.0.0"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

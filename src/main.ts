@@ -1,26 +1,12 @@
-import {
-  app,
-  BrowserWindow,
-  Tray,
-  Menu,
-  ipcMain,
-  dialog,
-  Notification,
-  shell,
-} from "electron";
+console.log(`${getTime()} : Starting...`);
+import { app, BrowserWindow, Tray, Menu, dialog, Notification } from "electron";
 import path from "node:path";
-import getPort from "get-port";
-import { fileURLToPath } from "node:url";
-import env from "dotenv";
-import { ChildProcess, fork } from "node:child_process";
-import Store from "electron-store";
-import axios, { AxiosError } from "axios";
-import { openVLC } from "./lib/vlc.js";
+import type { ChildProcess } from "node:child_process";
+import type { Axios } from "axios";
 import { fetchDownloads } from "./lib/streamer.js";
-import AppUpdater from "./lib/autoUpdater.js";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+import type { AppStore } from "./lib/store.js";
+import type AppUpdater from "./lib/autoUpdater.js";
+let appUpdater: AppUpdater;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let serverProcess: ChildProcess | null;
@@ -28,10 +14,15 @@ let port: number;
 let serverCleanedUp = false;
 let downloadFetchInterval: NodeJS.Timeout;
 let getTheLock = app.requestSingleInstanceLock();
-let autoUpdater = new AppUpdater();
-
-const store = new Store();
+let axios: Axios;
+let store: AppStore;
 let torrentSet = false;
+console.log(`${getTime()} : Modules imported`);
+
+function getTime() {
+  return new Date().toLocaleTimeString(undefined, { hour12: false });
+}
+
 function cleanupServerProcess(proc: ChildProcess | null) {
   if (!proc || serverCleanedUp) return;
   serverCleanedUp = true;
@@ -59,17 +50,13 @@ async function quitApp() {
   app.quit();
 }
 
-env.config({
-  path: path.join(app.getAppPath(), ".env"),
-});
-
 /* ---------------- SERVER ---------------- */
 
-function createServer(port: number) {
+async function createServer(port: number) {
   const serverFilePath = path.join(app.getAppPath(), "dist/server.js");
-
+  const { fork } = await import("node:child_process");
   serverProcess = fork(serverFilePath, [], {
-    stdio: "inherit",
+    stdio: "ignore",
     env: { ...process.env, NODE_ENV: "production" },
   });
 
@@ -141,6 +128,7 @@ async function createWindow(port: number, reload?: boolean) {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: true,
     webPreferences: {
       preload: path.join(app.getAppPath(), "assets/preload.js"),
     },
@@ -158,7 +146,8 @@ async function createWindow(port: number, reload?: boolean) {
     mainWindow = null;
   });
   try {
-    await mainWindow.loadURL(`http://localhost:${port}`);
+    const file = path.join(app.getAppPath(), "assets/loading.html");
+    await mainWindow.loadFile(file);
   } catch (err: any) {
     dialog.showErrorBox("Error when loading page", err.code);
   }
@@ -179,7 +168,7 @@ function createTray() {
         app.isQuiting = false;
         let reload = !serverProcess;
         if (!serverProcess) {
-          port = await getPort();
+          await loadModules();
           console.log("recreating the server process");
           await createServer(port);
         }
@@ -214,35 +203,39 @@ if (!getTheLock) {
     }
   });
 
-  ipcMain.handle("select-folder", async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ["openDirectory"],
-    });
-
-    return result.canceled ? null : result.filePaths[0];
-  });
-  ipcMain.handle("open-folder", async (e, path: string) => {
-    const err = await shell.openPath(path);
-
-    if (err) throw err;
-  });
-  ipcMain.handle("open-vlc", (e, streams: string[]) => {
-    openVLC(streams);
-  });
   app.whenReady().then(async () => {
     try {
-      createTray();
-      port = await getPort();
-      await createServer(port);
+      console.log(`${getTime()} : App is ready`);
+      console.log(`${getTime()} : Creating window...`);
+
       await createWindow(port);
+      createTray();
+      console.log(`${getTime()} : Loading modules...`);
+
+      await loadModules();
+      console.log(`${getTime()} : Creating server...`);
+
+      await createServer(port);
+      console.log(`${getTime()} : loading window url...`);
+      const currentVersion = app.getVersion();
+      const lastVersion = store.get("lastVersion");
+      let url: string;
+      //     if (lastVersion && lastVersion == currentVersion) {
+      //     url = `http://localhost:${port}/new-update`;
+      // } else {
+      // url = `http://localhost:${port}`;
+      // }
+      store.set("lastVersion", currentVersion);
+      url = `http://localhost:${port}`;
+      setTimeout(() => {
+        if (mainWindow) mainWindow.loadURL(url);
+      }, 2000);
+      console.log(`${getTime()} : sending torrents...`);
+
       await setSavedTorrents();
-      mainWindow?.once("ready-to-show", () => {
-        createTray();
-      });
+      console.log(`${getTime()} : successfully booted`);
     } catch (err: any) {
-      if (err instanceof AxiosError) {
-        dialog.showErrorBox("Error when booting app", err.message);
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         dialog.showErrorBox("Error when booting app", err.message);
       } else {
         dialog.showErrorBox("Error when booting app", "unknown error");
@@ -299,7 +292,7 @@ app.on("before-quit", async (e) => {
     app.exit(0);
   } catch (err: any) {
     console.log(err);
-    if (err instanceof AxiosError) {
+    if (err instanceof Error) {
       dialog.showErrorBox(
         "Error when closing app",
         "cannot save torrents data correctly\n" + err.message,
@@ -338,4 +331,20 @@ async function setSavedTorrents() {
     title: "HomeCinema",
     body: `${resp.data.setCount} torrents are setted`,
   }).show();
+}
+
+async function loadModules() {
+  const AppUpdater = (await import("./lib/autoUpdater.js")).default;
+  appUpdater = new AppUpdater();
+  const { AppStore } = await import("./lib/store.js");
+  store = new AppStore();
+  const { initIpcHandlers } = await import("./lib/ipc.js");
+  initIpcHandlers(store);
+  const env = (await import("dotenv")).default;
+  env.config({
+    path: path.join(app.getAppPath(), ".env"),
+  });
+  let getPort = (await import("get-port")).default;
+  port = await getPort();
+  axios = (await import("axios")).default;
 }

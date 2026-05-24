@@ -1,5 +1,5 @@
-import { exec } from "node:child_process";
+import { openApp } from "open";
 
-export function openVLC(streams: string[]) {
-  exec(`vlc ${streams.join(" ")}`);
+export async function openVLC(streams: string[]) {
+  await openApp("vlc", { arguments: streams });
 }
