@@ -41,7 +41,7 @@ jobs:
         run: npx electron-builder --linux AppImage --publish always
   build-windows:
     name: Build Windows (NSIS)
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     steps:
       - name: Checkout repo
