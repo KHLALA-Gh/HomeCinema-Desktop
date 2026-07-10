@@ -43,4 +43,5 @@ contextBridge.exposeInMainWorld("electron", {
     await ipcRenderer.invoke("dh:torrent-prop", infoHash),
   move: async (src, dest) =>
     await ipcRenderer.invoke("filesystem:move", src, dest),
+  fetchPrivateIp: async () => await ipcRenderer.invoke("get-private-ip"),
 });

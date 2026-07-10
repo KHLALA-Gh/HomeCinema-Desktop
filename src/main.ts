@@ -1,11 +1,20 @@
 console.log(`${getTime()} : Starting...`);
-import { app, BrowserWindow, Tray, Menu, dialog, Notification } from "electron";
+import {
+  app,
+  BrowserWindow,
+  Tray,
+  Menu,
+  dialog,
+  Notification,
+  shell,
+} from "electron";
 import path from "node:path";
 import type { ChildProcess } from "node:child_process";
 import type { Axios } from "axios";
 import { fetchDownloads } from "./lib/streamer.js";
 import type { AppStore } from "./lib/store.js";
 import type AppUpdater from "./lib/autoUpdater.js";
+import fs from "fs";
 let appUpdater: AppUpdater;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -142,6 +151,15 @@ async function createWindow(port: number, reload?: boolean) {
       mainWindow?.hide();
     }
   });
+  mainWindow.webContents.setWindowOpenHandler((details) => {
+    // Only allow specific protocols for security reasons
+    if (details.url.startsWith("https:") || details.url.startsWith("http:")) {
+      shell.openExternal(details.url); // Open in user's default browser
+    }
+
+    return { action: "deny" }; // Prevent Electron from opening its own popup window
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -348,3 +366,20 @@ async function loadModules() {
   port = await getPort();
   axios = (await import("axios")).default;
 }
+
+function clearTempDirectory() {
+  try {
+    const tempPath = path.join(app.getPath("temp"), "homecinema");
+    console.log(tempPath);
+    if (fs.existsSync(tempPath)) {
+      fs.rmSync(tempPath, { recursive: true, force: true });
+      console.log("App temporary files successfully cleared.");
+    }
+  } catch (error) {
+    console.error("Failed to clear temporary files:", error);
+  }
+}
+
+app.on("quit", () => {
+  clearTempDirectory();
+});
