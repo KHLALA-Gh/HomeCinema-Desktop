@@ -17,7 +17,6 @@
   "license": "Apache-2.0",
   "description": "Home Cinema Desktop App",
   "dependencies": {
-    "@home-cinema/app": "^0.0.8-beta.1",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
     "electron-log": "^5.4.3",
@@ -26,6 +25,7 @@
     "fs-extra": "^11.3.3",
     "get-folder-size": "^5.0.0",
     "get-port": "^7.1.0",
+    "home-cinema-app-backup": "^0.0.8-beta.2",
     "open": "^11.0.0"
   },
   "devDependencies": {
