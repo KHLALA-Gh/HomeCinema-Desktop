@@ -30,7 +30,7 @@ process.on("message", async (e: any) => {
 
 async function createServer(port: number) {
   //@ts-ignore
-  const { bootServer } = await import("@home-cinema/app");
+  const { bootServer } = await import("home-cinema-app-backup");
   server = await bootServer(port, {
     desktopMode: true,
     version: {
