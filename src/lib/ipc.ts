@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 import axios, { AxiosError } from "axios";
 import getFolderSize from "get-folder-size";
-import os from "os";
+import { internalIpV4} from 'internal-ip';
 export function initIpcHandlers(store: AppStore) {
   ipcMain.handle("select-folder", async () => {
     const result = await dialog.showOpenDialog({
@@ -162,17 +162,9 @@ export function initIpcHandlers(store: AppStore) {
       store.setSearchOp(set);
     },
   );
-  ipcMain.handle("get-private-ip", (): string => {
-    const interfaces = os.networkInterfaces();
-
-    for (const interfaceName of Object.keys(interfaces)) {
-      if (!interfaces[interfaceName]) continue;
-      for (const iface of interfaces[interfaceName]) {
-        if (iface.family === "IPv4" && !iface.internal) {
-          return iface.address;
-        }
-      }
-    }
+  ipcMain.handle("get-private-ip", async(): Promise<string> => {
+    const ip = await internalIpV4()
+    if(ip)return ip
     throw Error("cannot get private ip address");
   });
 }
